@@ -3,9 +3,12 @@ Esquemas Pydantic para el recurso "users" de device_systems.
 """
 
 from enum import Enum
-from typing import Optional
+from typing import Annotated, Optional
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, StringConstraints, field_validator
+
+
+UserName = Annotated[str, StringConstraints(strip_whitespace=True, min_length=3, max_length=80)]
 
 
 class UserRole(str, Enum):
@@ -19,7 +22,7 @@ class UserRole(str, Enum):
 class UserBase(BaseModel):
     """Campos comunes compartidos entre los distintos esquemas de usuario."""
 
-    name: str = Field(
+    name: UserName = Field(
         ...,
         min_length=3,
         max_length=80,
@@ -65,7 +68,7 @@ class UserUpdate(BaseModel):
     completo al usuario existente (actualización total).
     """
 
-    name: str = Field(..., min_length=3, max_length=80)
+    name: UserName = Field(..., min_length=3, max_length=80)
     email: EmailStr = Field(...)
     role: UserRole = Field(...)
     is_active: bool = Field(...)
@@ -90,10 +93,17 @@ class UserPatch(BaseModel):
     envía los que quiere modificar.
     """
 
-    name: Optional[str] = Field(default=None, min_length=3, max_length=80)
+    name: Optional[UserName] = Field(default=None)
     email: Optional[EmailStr] = Field(default=None)
     role: Optional[UserRole] = Field(default=None)
     is_active: Optional[bool] = Field(default=None)
+
+    @field_validator("name", "email", "role", "is_active", mode="before")
+    @classmethod
+    def reject_null(cls, value):
+        if value is None:
+            raise ValueError("El campo no puede ser null; omítalo si no desea modificarlo")
+        return value
 
     model_config = ConfigDict(
         json_schema_extra={"example": {"role": "support"}}

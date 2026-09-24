@@ -1,4 +1,5 @@
 import os
+import secrets
 from typing import Optional
 
 from fastapi import Depends, Header, HTTPException, Query, status
@@ -61,7 +62,9 @@ def verify_api_key(
 ) -> str:
     """Simula una autenticación básica leyendo una cabecera personalizada."""
     expected_key = os.getenv("API_KEY", "device_systems_key")
-    if x_api_key != expected_key:
+    if not expected_key or not x_api_key or not secrets.compare_digest(
+        x_api_key.encode("utf-8"), expected_key.encode("utf-8")
+    ):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="API Key inválida o no proporcionada",

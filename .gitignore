@@ -8,9 +8,5 @@ device_systems.db
 .pytest_cache/
 .vscode/
 .idea/
-=======
-venv/
-__pycache__/
-*.pyc
-.env
-
+.coverage
+htmlcov/

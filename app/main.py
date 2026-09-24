@@ -1,4 +1,5 @@
 import logging
+from contextlib import asynccontextmanager
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -13,7 +14,13 @@ from app.routes import user_routes
 
 logging.basicConfig(level=logging.INFO)
 
-Base.metadata.create_all(bind=engine)
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    Base.metadata.create_all(bind=engine)
+    yield
+
+
+settings = get_api_settings()
 
 app = FastAPI(
     title="device_systems API",
@@ -23,8 +30,8 @@ app = FastAPI(
         "relacional, CRUD completo, filtros, validaciones, constraints "
         "y manejo controlado de errores."
     ),
-    version="3.0.0",
-    contact={"name": "Nombre Apellido", "email": "ejemplo@device-systems.com"},
+    version=settings["version"],
+    lifespan=lifespan,
     openapi_tags=[
         {"name": "Users", "description": "Operaciones CRUD sobre usuarios."},
         {"name": "Root", "description": "Estado general de la API."},
@@ -37,7 +44,7 @@ async def add_custom_headers(request: Request, call_next):
     """Agrega cabeceras HTTP personalizadas a todas las respuestas."""
     response = await call_next(request)
     response.headers["X-App-Name"] = "device_systems"
-    response.headers["X-API-Version"] = "3.0"
+    response.headers["X-API-Version"] = app.version
     return response
 
 
@@ -67,7 +74,7 @@ def root(settings: dict = Depends(get_api_settings)):
         "app": settings["app_name"],
         "version": settings["version"],
         "status": "ok",
-        "database": "sqlite + sqlalchemy",
+        "database": f"{engine.dialect.name} + sqlalchemy",
         "docs": "/docs",
         "redoc": "/redoc",
     }
